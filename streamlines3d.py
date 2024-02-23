@@ -62,9 +62,7 @@ def streamlines(x, y, z, u, v, w, minlength=0.1, start_points=None, maxlength=4.
         if t is not None:
             trajectories.append(t)
 
-    # print("len(trajectories):", len(trajectories))
-    # print(trajectories[0][:10])
-    streamlines = []
+    streamlines_array = []
     for t in trajectories:
         # Rescale from grid-coordinates to data-coordinates.
         tx, ty, tz = dmap.grid2data(*np.array(t))
@@ -73,11 +71,11 @@ def streamlines(x, y, z, u, v, w, minlength=0.1, start_points=None, maxlength=4.
         tz += grid.z_origin
 
         # points = np.transpose([tx, ty, tz]).reshape(-1, 1, 3)
-        # streamlines.extend(np.hstack([points[:-1], points[1:]]))
-        streamlines.append(np.column_stack([tx, ty, tz]))
-    # print(streamlines[0][:10])
+        # streamlines_array.extend(np.hstack([points[:-1], points[1:]]))
+        streamlines_array.append(np.column_stack([tx, ty, tz]))
+    # print(streamlines_array[0][:10])
 
-    return streamlines
+    return streamlines_array
 
 # Coordinate definitions
 # ========================
@@ -220,7 +218,7 @@ def get_integrator(u, v, w, dmap, minlength, maxlength, integration_direction):
             y_traj += yt
             z_traj += zt
 
-        if stotal > minlength:
+        if stotal >= minlength:
             return x_traj, y_traj, z_traj
         else:  # reject short trajectories
             return None
@@ -383,7 +381,7 @@ def _euler_step(xf_traj, yf_traj, zf_traj, dmap, f):
 # ========================
 
 def interpgrid(a, xi, yi, zi):
-    """Fast 2D, linear interpolation on an integer grid"""
+    """Fast 3D, linear interpolation on an integer grid"""
 
     Nz, Ny, Nx = np.shape(a)
     if isinstance(xi, np.ndarray):
