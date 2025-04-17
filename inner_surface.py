@@ -41,7 +41,7 @@ def truncated_streamlines(raw_streamlines, depth):
   return np.array(endpoints)
 
 def compute_sdf_grid(v, offset=1, grid_size=0.02):
-  '''compute a regular grid, used for the sdf'''
+  '''compute a regular grid, used for the SDF'''
   mn = [np.floor(dim-offset) for dim in np.min(v, axis=0)]
   mx = [np.ceil(dim+offset) for dim in np.max(v, axis=0)]
   X, Y, Z = (np.arange(mn[0], mx[0]+grid_size, grid_size),
