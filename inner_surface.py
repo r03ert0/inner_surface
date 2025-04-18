@@ -90,7 +90,7 @@ def compute_streamlines(v, X, Y, Z, vol, gradient_spacing=0.02, integration_dire
 
   return raw_streamlines
 
-def compute_streamsurfaces(v, f, X, Y, Z, field, gradient_spacing=0.02, num_steps=20, integration_direction="backward"):
+def compute_streamsurfaces(v, f, X, Y, Z, field, gradient_spacing=0.02, num_steps=20):
   '''Compute streamsurfaces from mesh vertices'''
   # compute gradients
   DxW, DyW, DzW = np.gradient(field, gradient_spacing)
@@ -106,8 +106,7 @@ def compute_streamsurfaces(v, f, X, Y, Z, field, gradient_spacing=0.02, num_step
     minlength=0,
     maxlength=1,
     smoothness=0.3,
-    num_steps=num_steps,
-    integration_direction=integration_direction)
+    num_steps=num_steps)
   
   return raw_streamsurfaces
 
