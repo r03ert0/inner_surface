@@ -1,11 +1,18 @@
 import numpy as np
 import igl
 from scipy.sparse import diags
+import scipy.sparse.linalg as spla
 
-def streamsurfaces(verts, tris, x, y, z, u, v, w, step_size=0.01, num_steps=100, smoothness=0.1, minlength=0, integration_direction='both', maxlength=1.0):
+def streamsurfaces(
+    verts, tris,
+    x, y, z, u, v, w,
+    num_steps=100,
+    smoothness=0.1 ):
     '''
-    Compute the stream surface of a vector field.
-    Parameters
+    Compute the stream surface of a vector field. Integration direction
+    is always forward.
+
+        Parameters
     ----------
     verts: array of float with shape (, 3)
         Mesh vertices
@@ -13,8 +20,6 @@ def streamsurfaces(verts, tris, x, y, z, u, v, w, step_size=0.01, num_steps=100,
         Vector field components
     tris: array of int with shape (, 3)
         Mesh triangles
-    step_size: float
-        Time step
     num_steps: int
         Number of time steps to take to compute the stream surface
     Returns
@@ -26,10 +31,7 @@ def streamsurfaces(verts, tris, x, y, z, u, v, w, step_size=0.01, num_steps=100,
     grid = Grid(x, y, z)
     dmap = DomainMap(grid)
 
-    if integration_direction == 'both':
-        maxlength /= 2.
-
-    integrate_step = get_integrator(u, v, w, dmap, minlength, maxlength, integration_direction)
+    integrate_step = get_integrator(u, v, w, dmap)
 
     sp3 = np.asanyarray(verts, dtype=float).copy()
 
@@ -43,25 +45,25 @@ def streamsurfaces(verts, tris, x, y, z, u, v, w, step_size=0.01, num_steps=100,
     # Compute cotangent weights for the mesh laplacian
     L = igl.cotmatrix(sp3, tris)
     M = igl.massmatrix(sp3, tris, igl.MASSMATRIX_TYPE_VORONOI)
-    Minv = diags(1/M.diagonal()) # np.diag(1/M.diagonal()) # igl.invert_diag(M)
+    A = M - smoothness * L
 
     # Integrate the surface over time
     sp3_array = [sp3 + [grid.x_origin, grid.y_origin, grid.z_origin]]
-    for i in range(num_steps):
+    for _ in range(num_steps):
 
         xg, yg, zg = dmap.data2grid(sp3[:, 0], sp3[:, 1], sp3[:, 2])
         disp = integrate_step(xg, yg, zg)
 
-        L_disp = L.dot(disp)
-        disp_smooth = Minv.dot(M.dot(disp) + smoothness * L_disp)
+        # smooth implicit
+        disp_smooth = np.zeros_like(disp)
+        for j in range(3):
+            rhs = M @ disp[:, j]
+            disp_smooth[:, j] = spla.spsolve(A, rhs)
 
-        # Move the vertices
+        # advect the vertices
         sp3 += disp_smooth
-        # sp3 += disp
 
         sp3_array.append(sp3 + [grid.x_origin, grid.y_origin, grid.z_origin])
-
-        # igl.write_triangle_mesh(f"9c_test_verts_tris-{i}.ply", sp3, tris, force_ascii=False)
 
     return sp3_array
 
@@ -146,7 +148,7 @@ class TerminateTrajectory(Exception):
 # Integrator definitions
 # =======================
 
-def get_integrator(u, v, w, dmap, minlength, maxlength, integration_direction):
+def get_integrator(u, v, w, dmap) # minlength, maxlength, integration_direction
 
     # rescale velocity onto grid-coordinates for integrations.
     u, v, w = dmap.data2grid(u, v, w)
